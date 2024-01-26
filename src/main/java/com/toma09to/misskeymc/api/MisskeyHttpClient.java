@@ -10,8 +10,9 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.util.logging.Logger;
 
-public class MisskeyClient {
-    private final String address;
+public class MisskeyHttpClient {
+    private final String host;
+    private final boolean useSsl;
     private final String token;
     private final String visibility;
     private final boolean localOnly;
@@ -20,8 +21,9 @@ public class MisskeyClient {
     private final String prefix;
     private final boolean isDebug;
 
-    public MisskeyClient(String address, String token, String visibility, boolean localOnly, String channelId, String prefix, boolean isDebug) {
-        this.address = address;
+    public MisskeyHttpClient(String host, boolean useSsl, String token, String visibility, boolean localOnly, String channelId, String prefix, boolean isDebug) {
+        this.host = host;
+        this.useSsl = useSsl;
         this.token = token;
         this.visibility = visibility;
         this.localOnly = localOnly;
@@ -31,9 +33,10 @@ public class MisskeyClient {
     }
     public void sendPost(String message) {
         Logger log = Bukkit.getLogger();
-        String url = this.address + "/api/notes/create";
-        CreateNoteJson body = new CreateNoteJson(this.token, this.visibility, null, this.localOnly, this.channelId, this.prefix + message);
+        CreateNoteJson body = new CreateNoteJson(token, visibility, null, localOnly, channelId, prefix + message);
+        String url = useSsl ? "https://" : "http://" + host + "/api/notes/create";
 
+        // HTTP Client
         HttpClient client = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .build();

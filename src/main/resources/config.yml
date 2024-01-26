@@ -1,5 +1,6 @@
 misskey:
-  address: "http://localhost:3000"
+  host: "localhost:3000"
+  useSsl: false
   token: ""
   visibility: "public"
   localOnly: false

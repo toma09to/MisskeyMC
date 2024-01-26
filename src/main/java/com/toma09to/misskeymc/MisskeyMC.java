@@ -4,10 +4,10 @@ import com.toma09to.misskeymc.listeners.PlayerJoinLeaveListener;
 import com.toma09to.misskeymc.listeners.PlayerChatListener;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
-import com.toma09to.misskeymc.api.MisskeyClient;
+import com.toma09to.misskeymc.api.MisskeyHttpClient;
 
 public final class MisskeyMC extends JavaPlugin {
-    private MisskeyClient misskey;
+    private MisskeyHttpClient misskey;
     private String enabledMessage;
     private String disabledMessage;
 
@@ -15,7 +15,8 @@ public final class MisskeyMC extends JavaPlugin {
     public void onEnable() {
         saveResource("config.yml", false);
 
-        String address = getConfig().getString("misskey.address");
+        String host = getConfig().getString("misskey.host");
+        boolean useSsl = getConfig().getBoolean("misskey.useSsl");
         String token = getConfig().getString("misskey.token");
         String visibility = getConfig().getString("misskey.visibility");
         boolean localOnly = getConfig().getBoolean("misskey.localOnly");
@@ -30,7 +31,7 @@ public final class MisskeyMC extends JavaPlugin {
         this.disabledMessage = getConfig().getString("message.disabledMessage");
         String chatMessage = getConfig().getString("message.chatMessage");
 
-        misskey = new MisskeyClient(address, token, visibility, localOnly, channelId, prefix, isDebug);
+        misskey = new MisskeyHttpClient(host, useSsl, token, visibility, localOnly, channelId, prefix, isDebug);
 
         Bukkit.getServer().getPluginManager().registerEvents(
                 new PlayerJoinLeaveListener(misskey, serverUrl, joinMessage, quitMessage),

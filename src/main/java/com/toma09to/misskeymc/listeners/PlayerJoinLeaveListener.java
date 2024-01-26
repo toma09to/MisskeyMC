@@ -8,15 +8,15 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import com.toma09to.misskeymc.api.MisskeyClient;
+import com.toma09to.misskeymc.api.MisskeyHttpClient;
 
 public class PlayerJoinLeaveListener implements Listener {
-    private final MisskeyClient misskey;
+    private final MisskeyHttpClient misskey;
     private final String serverUrl;
     private final String joinMessageTemplate;
     private final String quitMessageTemplate;
 
-    public PlayerJoinLeaveListener(MisskeyClient misskey, String serverUrl, String join, String quit) {
+    public PlayerJoinLeaveListener(MisskeyHttpClient misskey, String serverUrl, String join, String quit) {
         this.misskey = misskey;
         this.serverUrl = serverUrl;
         this.joinMessageTemplate = join;

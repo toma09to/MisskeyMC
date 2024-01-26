@@ -4,13 +4,13 @@ import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import io.papermc.paper.event.player.AsyncChatEvent;
-import com.toma09to.misskeymc.api.MisskeyClient;
+import com.toma09to.misskeymc.api.MisskeyHttpClient;
 
 public class PlayerChatListener implements Listener {
-    private final MisskeyClient misskey;
+    private final MisskeyHttpClient misskey;
     private final String chatMessageTemplate;
 
-    public PlayerChatListener(MisskeyClient misskey, String chat) {
+    public PlayerChatListener(MisskeyHttpClient misskey, String chat) {
         this.misskey = misskey;
         this.chatMessageTemplate = chat;
     }
