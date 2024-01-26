@@ -1,5 +1,6 @@
 package com.toma09to.misskeymc.api;
 
+import com.toma09to.misskeymc.model.CreateNoteJson;
 import org.bukkit.Bukkit;
 
 import java.io.IOException;
@@ -31,7 +32,7 @@ public class MisskeyClient {
     public void sendPost(String message) {
         Logger log = Bukkit.getLogger();
         String url = this.address + "/api/notes/create";
-        MisskeyJson body = new MisskeyJson(this.token, this.visibility, null, this.localOnly, this.channelId, this.prefix + message);
+        CreateNoteJson body = new CreateNoteJson(this.token, this.visibility, null, this.localOnly, this.channelId, this.prefix + message);
 
         HttpClient client = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)

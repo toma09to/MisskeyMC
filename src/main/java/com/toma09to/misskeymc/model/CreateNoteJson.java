@@ -1,10 +1,10 @@
-package com.toma09to.misskeymc.api;
+package com.toma09to.misskeymc.model;
 
 import com.google.gson.Gson;
 
 import javax.annotation.Nonnull;
 
-public class MisskeyJson {
+public class CreateNoteJson {
     public String i;
     public String visibility;
     public String cw;
@@ -12,7 +12,7 @@ public class MisskeyJson {
     public String channelId;
     public String text;
 
-    public MisskeyJson(@Nonnull String token, String visibility, String cw, boolean localOnly, String channelId, @Nonnull String text) {
+    public CreateNoteJson(@Nonnull String token, String visibility, String cw, boolean localOnly, String channelId, @Nonnull String text) {
         this.i = token;
         this.visibility = visibility;
         this.cw = cw;
