@@ -1,0 +1,9 @@
+misskey:
+  server-fqdn: 'misskey.example.com'
+  channel-id: ''
+  token: ''
+  chat-message-format: '<%username%> %message%'
+  server-message-format: '[Server] %message%'
+
+minecraft:
+  chat-message-format: '<%name%> %message%'
