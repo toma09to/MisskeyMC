@@ -14,6 +14,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.bukkit.Bukkit
 import org.bukkit.scheduler.BukkitRunnable
+import java.util.*
 import java.util.logging.Logger
 
 class WebSocketRunnable(
@@ -31,7 +32,7 @@ class WebSocketRunnable(
         ignoreUnknownKeys = true
         explicitNulls = false
     }
-    private val id = "misskeymc"
+    private val id = UUID.randomUUID().toString()
 
     private val session = runBlocking {
         client.webSocketSession {
