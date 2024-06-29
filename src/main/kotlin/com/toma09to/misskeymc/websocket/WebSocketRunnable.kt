@@ -1,15 +1,16 @@
 package com.toma09to.misskeymc.websocket
 
+import com.toma09to.misskeymc.database.SQLiteConnection
 import com.toma09to.misskeymc.events.AsyncMisskeyChatEvent
+import com.toma09to.misskeymc.misskey.MisskeyClient
+import com.toma09to.misskeymc.misskey.MisskeyNote
 import io.ktor.client.*
 import io.ktor.client.engine.java.*
+import io.ktor.client.plugins.logging.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.http.*
 import io.ktor.websocket.*
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.*
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import org.bukkit.Bukkit
@@ -19,14 +20,18 @@ import java.util.logging.Logger
 
 class WebSocketRunnable(
     private val logger: Logger,
+    private val db: SQLiteConnection,
+    private val msky: MisskeyClient,
     private val fqdn: String,
     private val channelId: String?,
     private val token: String,
+    private val botName: String,
 ) : BukkitRunnable() {
     private val client = HttpClient(Java) {
         install(WebSockets) {
             pingInterval = 20_000
         }
+        install(Logging)
     }
     private val json = Json {
         ignoreUnknownKeys = true
@@ -34,8 +39,10 @@ class WebSocketRunnable(
     }
     private val id = UUID.randomUUID().toString()
 
-    private val session = runBlocking {
-        client.webSocketSession {
+    private var session: WebSocketSession? = null
+
+    suspend fun connect() {
+        session = client.webSocketSession {
             method = HttpMethod.Get
             url {
                 protocol = URLProtocol.WSS
@@ -45,43 +52,45 @@ class WebSocketRunnable(
                 parameters.append("i", token)
             }
         }
-    }
 
-    suspend fun connect() {
-        session.outgoing.send(Frame.Text(
+        session?.outgoing?.send(Frame.Text(
             json.encodeToString(connectChannelBody(id))
         ))
     }
 
     suspend fun disconnect() {
-        session.outgoing.send(Frame.Text(
-            json.encodeToString(disconnectChannelBody(id))
-        ))
-        withContext(Dispatchers.IO) {
-            Thread.sleep(1000)
-        }
+        session?.outgoing?.send(Frame.Text(
+            json.encodeToString(disconnectChannelBody(id)))
+        )
         client.close()
     }
 
     override fun run() {
-        logger.info(isCancelled.toString())
-        if (!client.isActive) {
-            cancel()
-            return
-        }
-
         runBlocking {
-            session.incoming.let {
+            if (!client.isActive) {
+                connect()
+                return@runBlocking
+            }
+
+            session?.incoming?.let {
                 when(val frame = it.tryReceive().getOrNull()) {
                     is Frame.Text -> {
                         val receivedText = frame.readText()
                         try {
                             val receivedData = json.decodeFromString<WebSocketResponse>(receivedText)
+                            val receivedPost = receivedData.body.body
 
-                            if (receivedData.body.body.channelId == channelId && !receivedData.body.body.user?.isBot!!) {
+                            if (receivedPost.channelId == channelId && !receivedPost.user?.isBot!!) {
                                 Bukkit.getPluginManager().callEvent(AsyncMisskeyChatEvent(receivedData.body.body))
-                            } else if (receivedData.body.body.visibility == "specified") {
-                                TODO("Authorization via Misskey")
+                            } else if (receivedPost.visibility == "specified") {
+                                val receivedToken = receivedPost.text
+                                    .replace("@$botName", "")
+                                    .trim()
+                                if (db.authorizeUser(receivedToken, receivedPost.user!!.id)) {
+                                    msky.createNote(MisskeyNote(text = "認証に成功しました。", replyId = receivedPost.id, visibility = "specified"))
+                                } else {
+                                    msky.createNote(MisskeyNote(text = "認証に失敗しました。もう一度お試しください。", replyId = receivedPost.id, visibility = "specified"))
+                                }
                             }
                         } catch (e: Exception) {
                             logger.warning("Error while decoding $receivedText")

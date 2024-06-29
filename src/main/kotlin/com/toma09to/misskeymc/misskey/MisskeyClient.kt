@@ -8,8 +8,9 @@ import io.ktor.client.statement.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.encodeToString
+import java.util.logging.Logger
 
-class MisskeyClient(fqdn: String, private val channelId: String?, private val token: String) {
+class MisskeyClient(private val logger: Logger, fqdn: String, private val channelId: String?, private val token: String) {
     private val url = "https://$fqdn/"
     private val client = HttpClient(Java)
 
@@ -35,9 +36,24 @@ class MisskeyClient(fqdn: String, private val channelId: String?, private val to
         }
 
         val response = runBlocking { sendRequest("api/notes/create", data) }
-        val responseJson = json.decodeFromString<CreatedNote>(response.bodyAsText())
+        var responseJson = CreatedNote(MisskeyNote(text = ""))
+
+        try {
+            responseJson = json.decodeFromString<CreatedNote>(response.bodyAsText())
+        } catch (e: Exception) {
+            logger.warning("Error while creating note")
+            logger.warning(response.bodyAsText())
+            throw e
+        }
 
         return responseJson.createdNote
+    }
+
+    suspend fun getUserName(): String {
+        val response = runBlocking { sendRequest("api/i", NullRequestBody()) }
+        val responseJson = json.decodeFromString<MisskeyUser>(response.bodyAsText())
+
+        return responseJson.username
     }
 
     fun close() {
