@@ -1,6 +1,8 @@
 package com.toma09to.misskeymc
 
+import com.toma09to.misskeymc.database.SQLiteConnection
 import com.toma09to.misskeymc.listeners.MisskeyChatListener
+import com.toma09to.misskeymc.listeners.PlayerAuthorizationListener
 import com.toma09to.misskeymc.listeners.PlayerChatListener
 import com.toma09to.misskeymc.misskey.MisskeyClient
 import com.toma09to.misskeymc.misskey.MisskeyNote
@@ -12,8 +14,9 @@ import org.bukkit.plugin.java.JavaPlugin
 class MisskeyMC : JavaPlugin() {
     private var channelId: String? = null
     private var toMisskeyServerFormat: String = ""
-    private var client: MisskeyClient = MisskeyClient("", null, "")
+    private var client: MisskeyClient = MisskeyClient(logger, "", null, "")
     private var wsClient: WebSocketClient? = null
+    private val sqlite = SQLiteConnection()
 
     override fun onEnable() {
         saveDefaultConfig()
@@ -23,6 +26,7 @@ class MisskeyMC : JavaPlugin() {
         val token = config.getString("misskey.token")
         val toMisskeyChatFormat = config.getString("misskey.chat-message-format")
         val toMisskeyServerFormatNullable = config.getString("misskey.server-message-format")
+        val requireAuthorization = config.getBoolean("misskey.require-authorization")
 
         if (fqdn == null || token == null || toMisskeyChatFormat == null || toMisskeyServerFormatNullable == null) {
             Bukkit.getPluginManager().disablePlugin(this)
@@ -30,11 +34,15 @@ class MisskeyMC : JavaPlugin() {
         }
         toMisskeyServerFormat = toMisskeyServerFormatNullable
 
-        client = MisskeyClient(fqdn, channelId, token)
-        wsClient = WebSocketClient(logger, fqdn, channelId, token)
+        client = MisskeyClient(logger, fqdn, channelId, token)
+        val botName = runBlocking { client.getUserName() }
+        wsClient = WebSocketClient(logger, sqlite, client, fqdn, botName, channelId, token)
 
         server.pluginManager.registerEvents(PlayerChatListener(client, toMisskeyChatFormat), this)
         server.pluginManager.registerEvents(MisskeyChatListener(toMisskeyChatFormat), this)
+        if (requireAuthorization) {
+            server.pluginManager.registerEvents(PlayerAuthorizationListener(sqlite, fqdn, botName), this)
+        }
 
         wsClient?.connect()
 
@@ -46,13 +54,13 @@ class MisskeyMC : JavaPlugin() {
     }
 
     override fun onDisable() {
-        client.close()
         wsClient?.close()
 
         val disabledMessage = toMisskeyServerFormat.replace("%message%", "サーバーが終了しました")
         runBlocking {
             client.createNote(MisskeyNote(channelId = channelId, text = disabledMessage, visibility = "public"))
         }
+        client.close()
 
         logger.info("Disabled MisskeyMC")
     }
