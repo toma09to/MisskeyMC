@@ -1,4 +1,4 @@
 name: MisskeyMC
-version: '1.0-SNAPSHOT'
+version: '1.0'
 main: com.toma09to.misskeymc.MisskeyMC
 api-version: '1.21'
