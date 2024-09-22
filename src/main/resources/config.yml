@@ -7,6 +7,10 @@ misskey:
 chat:
   minecraft-to-misskey-prefix: '[%player%] '
   misskey-to-minecraft-prefix: '<%name%> '
+  server-start-message: '[Server] サーバーが起動しました'
+  server-stop-message: '[Server] サーバーが停止しました'
+  join-message-format: '[Server] %player%がゲームに参加しました'
+  quit-message-format: '[Server] %player%がゲームを退出しました'
 
 auth:
   require-authentication: false
