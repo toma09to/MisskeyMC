@@ -24,6 +24,10 @@ dependencies {
     implementation("io.ktor:ktor-client-core:2.3.12")
     implementation("io.ktor:ktor-client-cio:2.3.12")
     implementation("io.ktor:ktor-client-websockets:2.3.12")
+    implementation("org.jetbrains.exposed:exposed-core:0.54.0")
+    implementation("org.jetbrains.exposed:exposed-jdbc:0.54.0")
+    implementation("org.jetbrains.exposed:exposed-kotlin-datetime:0.54.0")
+    implementation("org.xerial:sqlite-jdbc:3.44.1.0")
 }
 
 val targetJavaVersion = 21

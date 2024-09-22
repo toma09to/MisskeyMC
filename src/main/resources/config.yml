@@ -7,3 +7,6 @@ misskey:
 chat:
   minecraft-to-misskey-prefix: '[%player%] '
   misskey-to-minecraft-prefix: '<%name%> '
+
+auth:
+  require-authentication: false

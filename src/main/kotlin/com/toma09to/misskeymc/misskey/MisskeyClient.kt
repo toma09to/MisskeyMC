@@ -1,5 +1,6 @@
 package com.toma09to.misskeymc.misskey
 
+import com.toma09to.misskeymc.database.UserDatabase
 import com.toma09to.misskeymc.events.MisskeyChatEvent
 import com.toma09to.misskeymc.models.*
 import io.ktor.client.*
@@ -17,16 +18,15 @@ import org.bukkit.plugin.PluginManager
 import org.bukkit.scheduler.BukkitRunnable
 import java.net.URL
 import java.util.*
-import java.util.logging.Logger
 
 class MisskeyClient(
-    private val logger: Logger,
     private val pluginManager: PluginManager,
     private val monitor: MisskeyMonitor,
     private val mskyURL: URL,
     private val ssl: Boolean,
     private val token: String,
-    private val channelId: String?
+    private val channelId: String,
+    private val db: UserDatabase?,
 ): BukkitRunnable() {
     private val client = HttpClient(CIO) {
         install(WebSockets) {
@@ -58,6 +58,7 @@ class MisskeyClient(
         ignoreUnknownKeys = true
     }
     private var myId: String? = null
+    private var myUsername: String? = null
 
     private var isCanceled = false
 
@@ -103,7 +104,9 @@ class MisskeyClient(
 
         if (response.status == HttpStatusCode.OK) {
             runBlocking {
-                myId = json.decodeFromString<MisskeyUser>(response.body()).id
+                val myData = json.decodeFromString<MisskeyUser>(response.body())
+                myId = myData.id
+                myUsername = myData.username
             }
             return true
         } else {
@@ -145,24 +148,19 @@ class MisskeyClient(
     }
 
     suspend fun connectChannel() {
-        if (channelId != null) {
-            monitor.isChannelIdSet = true
-            wsSession.send(Frame.Text(json.encodeToString(webSocketConnectChannel(chUUID, channelId))))
-        }
         wsSession.send(Frame.Text(json.encodeToString(webSocketConnectMain(mainUUID))))
+        wsSession.send(Frame.Text(json.encodeToString(webSocketConnectChannel(chUUID, channelId))))
     }
 
     suspend fun disconnectChannel() {
         wsSession.send(Frame.Text(json.encodeToString(webSocketDisconnect(mainUUID))))
-        if (channelId != null) {
-            wsSession.send(Frame.Text(json.encodeToString(webSocketDisconnect(chUUID))))
-        }
+        wsSession.send(Frame.Text(json.encodeToString(webSocketDisconnect(chUUID))))
 
         wsSession.send(Frame.Close())
         isCanceled = true
     }
 
-    suspend fun sendNote(text: String): HttpResponse {
+    suspend fun sendNote(text: String, replyId: String? = null): HttpResponse {
         val path = generatePath("notes/create")
 
         return client.post {
@@ -178,13 +176,11 @@ class MisskeyClient(
             }
             setBody(json.encodeToString(MisskeyNote(
                 text = text,
-                channelId = channelId
+                channelId = if (replyId == null) channelId else null,
+                replyId = replyId,
+                visibility = if (replyId == null) "public" else "specified"
             )))
         }
-    }
-
-    suspend fun sendReply(text: String, replyId: String) {
-        wsSession.send(Frame.Text(""))
     }
 
     override fun run() {
@@ -211,12 +207,29 @@ class MisskeyClient(
                                         }
                                     }
                                     "channel" -> {
+                                        // Chat messages
                                         if (
                                             data.body.id == chUUID
                                             && data.body.type == "note"
                                             && data.body.body!!.user!!.id != myId
                                         ) {
                                             pluginManager.callEvent(MisskeyChatEvent(data.body.body))
+                                        }
+
+                                        // Authentication messages
+                                        if (
+                                            data.body.id == mainUUID
+                                            && data.body.type == "mention"
+                                            && data.body.body!!.visibility == "specified"
+                                            && db != null
+                                        ) {
+                                            val pass = data.body.body.text.removePrefix("@$myUsername").trim().toIntOrNull()
+
+                                            if (pass != null && db.checkPassword(pass, data.body.body.user!!)) {
+                                                sendNote("認証に成功しました。", data.body.body.id)
+                                            } else {
+                                                sendNote("認証に失敗しました。もう一度やり直してください。", data.body.body.id)
+                                            }
                                         }
                                     }
                                 }
