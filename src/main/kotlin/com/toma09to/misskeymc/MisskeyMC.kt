@@ -1,6 +1,8 @@
 package com.toma09to.misskeymc
 
+import com.toma09to.misskeymc.database.UserDatabase
 import com.toma09to.misskeymc.listeners.AsyncChatListener
+import com.toma09to.misskeymc.listeners.AsyncPlayerPreLoginListener
 import com.toma09to.misskeymc.listeners.MisskeyChatListener
 import com.toma09to.misskeymc.misskey.MisskeyClient
 import com.toma09to.misskeymc.misskey.MisskeyMonitor
@@ -19,6 +21,20 @@ class MisskeyMC : JavaPlugin() {
         // Plugin startup logic
         saveDefaultConfig()
 
+        val isAuthRequired = config.getBoolean("auth.require-authentication")
+        var database: UserDatabase? = null
+        if (isAuthRequired) {
+            database = UserDatabase(logger, "plugins/MisskeyMC/misskeymc.db")
+            if (!database.connectDatabase()) {
+                logger.warning("Failed to connect database.")
+                logger.warning("Server operates as if authentication is NOT required.")
+                database = null
+            } else {
+                database.createTable()
+                server.pluginManager.registerEvents(AsyncPlayerPreLoginListener(database), this)
+            }
+        }
+
         val url: URL
         val urlString = when (val str = config.getString("misskey.url")) {
             is String -> { str }
@@ -35,8 +51,11 @@ class MisskeyMC : JavaPlugin() {
             }
         }
         val channelId = when (val str = config.getString("misskey.channel-id")) {
-            "" -> { null }
-            else -> { str }
+            is String -> { str }
+            else -> {
+                logger.warning("Channel ID is not set!")
+                return
+            }
         }
         val useSSL = config.getBoolean("misskey.use-ssl")
 
@@ -48,7 +67,7 @@ class MisskeyMC : JavaPlugin() {
         }
 
         monitor = MisskeyMonitor(logger)
-        misskey = MisskeyClient(logger, server.pluginManager, monitor!!, url, useSSL, token, channelId)
+        misskey = MisskeyClient(server.pluginManager, monitor!!, url, useSSL, token, channelId, database)
 
         // verify parameters
         if (misskey?.verifyURL() != true) {
