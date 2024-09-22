@@ -1,0 +1,9 @@
+misskey:
+  url: 'https://example.com'
+  token: ''
+  channel-id: ''
+  use-ssl: true
+
+chat:
+  minecraft-to-misskey-prefix: '[%player%] '
+  misskey-to-minecraft-prefix: '<%name%> '
