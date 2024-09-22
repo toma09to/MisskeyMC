@@ -1,9 +1,7 @@
 package com.toma09to.misskeymc
 
 import com.toma09to.misskeymc.database.UserDatabase
-import com.toma09to.misskeymc.listeners.AsyncChatListener
-import com.toma09to.misskeymc.listeners.AsyncPlayerPreLoginListener
-import com.toma09to.misskeymc.listeners.MisskeyChatListener
+import com.toma09to.misskeymc.listeners.*
 import com.toma09to.misskeymc.misskey.MisskeyClient
 import com.toma09to.misskeymc.misskey.MisskeyMonitor
 import kotlinx.coroutines.runBlocking
@@ -108,9 +106,24 @@ class MisskeyMC : JavaPlugin() {
             is String -> { str }
             else -> { "" }
         }
+        val joinFormat = config.getString("chat.join-message-format")
+        val quitFormat = config.getString("chat.quit-message-format")
 
         server.pluginManager.registerEvents(AsyncChatListener(toMisskeyPrefix, misskey!!), this)
         server.pluginManager.registerEvents(MisskeyChatListener(toMinecraftPrefix, server), this)
+        if (joinFormat != null) {
+            server.pluginManager.registerEvents(PlayerJoinListener(joinFormat, misskey!!), this)
+        }
+        if (quitFormat != null) {
+            server.pluginManager.registerEvents(PlayerQuitListener(quitFormat, misskey!!), this)
+        }
+
+        val serverStartMessage = config.getString("chat.server-start-message")
+        if (serverStartMessage != null) {
+            runBlocking {
+                misskey?.sendNote(serverStartMessage)
+            }
+        }
 
         logger.info("Enabled MisskeyMC")
     }
@@ -123,6 +136,12 @@ class MisskeyMC : JavaPlugin() {
             }
         }
 
+        val serverStopMessage = config.getString("chat.server-stop-message")
+        if (serverStopMessage != null) {
+            runBlocking {
+                misskey?.sendNote(serverStopMessage)
+            }
+        }
         logger.info("Disabled MisskeyMC")
     }
 }
