@@ -52,14 +52,3 @@ fun webSocketDisconnect(id: String): WebSocketJSON {
         )
     )
 }
-
-fun webSocketSendNote(id: String, note: MisskeyNote): WebSocketJSON {
-    return WebSocketJSON(
-        type = "channel",
-        body = WebSocketJSONBody(
-            id = id,
-            type = "note",
-            body = note
-        )
-    )
-}
