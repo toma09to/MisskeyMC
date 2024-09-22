@@ -86,8 +86,15 @@ class MisskeyMC : JavaPlugin() {
             return
         }
 
-        runBlocking {
-            misskey?.connectChannel()
+        val isWebSocketConnected = runBlocking { misskey?.connectWebSocket() }
+        if (isWebSocketConnected == true) {
+            runBlocking {
+                misskey?.connectChannel()
+            }
+        } else {
+            logger.warning("Cannot connect the server over WebSocket.")
+            logger.warning("Verify that URL is correct.")
+            return
         }
         misskey?.runTaskTimer(this, 0L, 20L)
         monitor?.runTaskTimer(this, 60 * 20L, 60 * 20L)

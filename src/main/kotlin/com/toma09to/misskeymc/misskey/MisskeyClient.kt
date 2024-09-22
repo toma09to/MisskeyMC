@@ -34,22 +34,7 @@ class MisskeyClient(
         }
     }
 
-    private val wsSession = runBlocking {
-        val path = generatePath("streaming")
-
-        client.webSocketSession {
-            url {
-                protocol = if (ssl) URLProtocol.WSS else URLProtocol.WS
-                host = mskyURL.host
-                port = if (mskyURL.port == -1) mskyURL.defaultPort else mskyURL.port
-                pathSegments = path
-                headers {
-                    bearerAuth(token)
-                }
-            }
-        }
-    }
-
+    private var wsSession: DefaultClientWebSocketSession? = null
     private val mainUUID = UUID.randomUUID().toString()
     private val chUUID = UUID.randomUUID().toString()
     private val json = Json {
@@ -61,6 +46,30 @@ class MisskeyClient(
     private var myUsername: String? = null
 
     private var isCanceled = false
+
+    fun connectWebSocket(): Boolean {
+        try {
+            runBlocking {
+                val path = generatePath("streaming")
+
+                wsSession = client.webSocketSession {
+                    url {
+                        protocol = if (ssl) URLProtocol.WSS else URLProtocol.WS
+                        host = mskyURL.host
+                        port = if (mskyURL.port == -1) mskyURL.defaultPort else mskyURL.port
+                        pathSegments = path
+                        headers {
+                            bearerAuth(token)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            return false
+        }
+
+        return true
+    }
 
     fun verifyURL(): Boolean {
         val path = generatePath("server-info")
@@ -148,15 +157,15 @@ class MisskeyClient(
     }
 
     suspend fun connectChannel() {
-        wsSession.send(Frame.Text(json.encodeToString(webSocketConnectMain(mainUUID))))
-        wsSession.send(Frame.Text(json.encodeToString(webSocketConnectChannel(chUUID, channelId))))
+        wsSession?.send(Frame.Text(json.encodeToString(webSocketConnectMain(mainUUID))))
+        wsSession?.send(Frame.Text(json.encodeToString(webSocketConnectChannel(chUUID, channelId))))
     }
 
     suspend fun disconnectChannel() {
-        wsSession.send(Frame.Text(json.encodeToString(webSocketDisconnect(mainUUID))))
-        wsSession.send(Frame.Text(json.encodeToString(webSocketDisconnect(chUUID))))
+        wsSession?.send(Frame.Text(json.encodeToString(webSocketDisconnect(mainUUID))))
+        wsSession?.send(Frame.Text(json.encodeToString(webSocketDisconnect(chUUID))))
 
-        wsSession.send(Frame.Close())
+        wsSession?.send(Frame.Close())
         isCanceled = true
     }
 
@@ -190,9 +199,9 @@ class MisskeyClient(
         }
 
         runBlocking {
-            wsSession.incoming.let {
+            wsSession?.incoming.let {
                 while (true) {
-                    when (val frame = it.tryReceive().getOrNull()) {
+                    when (val frame = it?.tryReceive()?.getOrNull()) {
                         is Frame.Text -> {
                             val text = frame.readText()
                             try {
